@@ -1,0 +1,15 @@
+meta {
+  name: Test Mod
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://{{host}}:{{port}}/api/test/mod
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}

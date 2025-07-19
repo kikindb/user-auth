@@ -1,0 +1,11 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://{{host}}:{{port}}/health
+  body: none
+  auth: inherit
+}

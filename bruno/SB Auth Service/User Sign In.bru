@@ -1,0 +1,39 @@
+meta {
+  name: User Sign In
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://{{host}}:{{port}}/api/auth/signin
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+      "username": "admin3",
+      "password": "123456"
+  }
+}
+
+script:post-response {
+  // Extract tokens from the response
+  const json = res.getBody();
+  const accessToken = json.accessToken;
+  const refreshToken = json.refreshToken;
+  
+  // Save to local environment
+  if (accessToken && refreshToken) {
+    bru.setEnvVar("jwt", accessToken);
+    bru.setEnvVar("refreshToken", refreshToken);
+    console.log("✅ Tokens saved to local environment.");
+  } else {
+    console.log("❌ accessToken or refreshToken not found in response.");
+  }
+  
+}

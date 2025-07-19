@@ -1,0 +1,15 @@
+meta {
+  name: Test Admin
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://{{host}}:{{port}}/api/test/admin
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
