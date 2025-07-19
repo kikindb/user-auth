@@ -23,3 +23,20 @@ body:json {
       "refreshToken": "{{refreshToken}}"
   }
 }
+
+script:post-response {
+  // Extract tokens from the response
+  const json = res.getBody();
+  const accessToken = json.accessToken;
+  const refreshToken = json.refreshToken;
+  
+  // Save to local environment
+  if (accessToken && refreshToken) {
+    bru.setEnvVar("jwt", accessToken);
+    bru.setEnvVar("refreshToken", refreshToken);
+    console.log("✅ Tokens saved to local environment.");
+  } else {
+    console.log("❌ accessToken or refreshToken not found in response.");
+  }
+  
+}
