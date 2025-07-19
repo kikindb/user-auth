@@ -12,6 +12,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -95,13 +96,14 @@ public class WebSecurityConfig {
    */
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable()) // Disable CSRF for stateless APIs
+    http.csrf(AbstractHttpConfigurer::disable) // Disable CSRF for stateless APIs
         .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler)) // Set unauthorized handler
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Use stateless sessions (JWT)
         .authorizeHttpRequests(auth ->
             auth.requestMatchers("/api/auth/**").permitAll() // Permit all requests to /api/auth (for login/registration/refresh)
                 .requestMatchers("/api/test/**").permitAll() // Permit all requests to /api/test (for testing roles/permissions)
                 .requestMatchers("/health").permitAll()
+                .requestMatchers("/.well-known/jwks.json").permitAll() // Permite todas las solicitudes al endpoint JWKS
                 .anyRequest().authenticated() // All other requests require authentication
         );
 

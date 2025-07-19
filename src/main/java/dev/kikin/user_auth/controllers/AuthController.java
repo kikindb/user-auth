@@ -1,5 +1,8 @@
 package dev.kikin.user_auth.controllers;
 
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
 import dev.kikin.user_auth.entity.RefreshToken;
 import dev.kikin.user_auth.entity.Role;
 import dev.kikin.user_auth.entity.User;
@@ -27,8 +30,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.interfaces.RSAPublicKey;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -187,5 +192,19 @@ public class AuthController {
         })
         .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
             "Refresh token is not in database!"));
+  }
+
+  @GetMapping("/.well-known/jwks.json")
+  public Map<String, Object> jwks() {
+    RSAPublicKey publicKey = jwtUtils.getPublicKey();
+    String keyId = jwtUtils.getKeyId();
+
+    JWK jwk = new RSAKey.Builder(publicKey)
+        .keyUse(com.nimbusds.jose.jwk.KeyUse.SIGNATURE) // Uso de la clave: firma
+        .algorithm(com.nimbusds.jose.JWSAlgorithm.RS256) // Algoritmo de firma
+        .keyID(keyId) // Establece el Key ID
+        .build();
+
+    return new JWKSet(jwk).toJSONObject();
   }
 }

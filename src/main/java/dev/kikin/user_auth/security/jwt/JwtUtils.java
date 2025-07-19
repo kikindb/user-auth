@@ -2,22 +2,20 @@ package dev.kikin.user_auth.security.jwt;
 
 import dev.kikin.user_auth.security.services.UserDetailsImpl;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
+import java.util.UUID; // Importar UUID
 
 /**
  * Utility class for JSON Web Token (JWT) operations.
@@ -39,6 +37,10 @@ public class JwtUtils {
   @Value("${auth.app.jwtExpirationMs}")
   private int jwtExpirationMs;
 
+  // ID de la clave pública, usado en el JWKS. Un UUID fijo para el ejemplo.
+  // En producción, podrías generar esto dinámicamente o usar un hash de la clave.
+  private final String keyId = UUID.randomUUID().toString(); // Generar un Key ID único al inicio
+
   /**
    * Generates a JWT token for an authenticated user.
    * The token includes the username as the subject and is signed with the private key.
@@ -54,6 +56,7 @@ public class JwtUtils {
         .setIssuedAt(new Date()) // Set the token issuance date
         .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs)) // Set the token expiration date
         .signWith(getPrivateKey(), SignatureAlgorithm.RS256) // Sign the token with the private key using RS256 algorithm
+        .setHeaderParam("kid", keyId) // Añade el Key ID al encabezado del JWT
         .compact(); // Build and compact the JWT into a string
   }
 
@@ -88,22 +91,22 @@ public class JwtUtils {
    *
    * @return The PublicKey object for verifying JWTs.
    */
-  private PublicKey getPublicKey() {
+  public RSAPublicKey getPublicKey() { // Cambiado a RSAPublicKey
     try {
-      // Clean the key string: remove headers/footers, all whitespace (including newlines), and then trim
+      // Limpia la cadena de la clave: elimina encabezados/pies de página, todos los espacios en blanco (incluidas las nuevas líneas) y luego recorta
       String cleanKey = jwtPublicKey
           .replaceAll("-----BEGIN PUBLIC KEY-----", "")
           .replaceAll("-----END PUBLIC KEY-----", "")
-          .replaceAll("\\s", "") // Remove all whitespace characters
-          .trim(); // Trim any remaining leading/trailing whitespace
+          .replaceAll("\\s", "") // Elimina todos los caracteres de espacio en blanco
+          .trim(); // Recorta cualquier espacio en blanco inicial/final restante
 
       byte[] keyBytes = Base64.getDecoder().decode(cleanKey);
       X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
       KeyFactory kf = KeyFactory.getInstance("RSA");
-      return kf.generatePublic(spec);
+      return (RSAPublicKey) kf.generatePublic(spec); // Casteado a RSAPublicKey
     } catch (Exception e) {
-      logger.error("Error loading public key: {}", e.getMessage());
-      throw new RuntimeException("Error loading public key", e);
+      logger.error("Error al cargar la clave pública: {}", e.getMessage());
+      throw new RuntimeException("Error al cargar la clave pública", e);
     }
   }
 
@@ -143,5 +146,13 @@ public class JwtUtils {
       logger.error("Invalid JWT signature: {}", e.getMessage());
     }
     return false;
+  }
+
+  /**
+   * Obtiene el Key ID (kid) utilizado para firmar los JWTs.
+   * @return El Key ID.
+   */
+  public String getKeyId() {
+    return keyId;
   }
 }
