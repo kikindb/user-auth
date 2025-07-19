@@ -1,24 +1,31 @@
 package dev.kikin.user_auth.controllers;
 
+import dev.kikin.user_auth.entity.RefreshToken;
 import dev.kikin.user_auth.entity.Role;
 import dev.kikin.user_auth.entity.User;
+import dev.kikin.user_auth.exceptions.TokenRefreshException;
+import dev.kikin.user_auth.payload.request.TokenRefreshRequest;
+import dev.kikin.user_auth.payload.response.TokenRefreshResponse;
 import dev.kikin.user_auth.repository.RoleRepository;
 import dev.kikin.user_auth.repository.UserRepository;
 import dev.kikin.user_auth.security.jwt.JwtUtils;
 import dev.kikin.user_auth.security.services.UserDetailsImpl;
+import dev.kikin.user_auth.payload.request.JwtResponse;
+import dev.kikin.user_auth.payload.request.LoginRequest;
+import dev.kikin.user_auth.payload.request.SignupRequest;
+import dev.kikin.user_auth.payload.response.MessageResponse;
+import dev.kikin.user_auth.services.RefreshTokenService;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import dev.kikin.user_auth.payload.request.JwtResponse;
-import dev.kikin.user_auth.payload.request.LoginRequest;
-import dev.kikin.user_auth.payload.request.SignupRequest;
-import dev.kikin.user_auth.payload.response.MessageResponse;
 
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +33,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * REST Controller for user authentication (signup and signin).
+ * REST Controller for user authentication (signup, signin, and token refresh).
  * Handles requests to /api/auth/** endpoints.
  */
 @CrossOrigin(origins = "*", maxAge = 3600) // Allows cross-origin requests for development
@@ -49,9 +56,12 @@ public class AuthController {
   @Autowired
   JwtUtils jwtUtils; // Utility for JWT operations
 
+  @Autowired
+  RefreshTokenService refreshTokenService; // Service for refresh token operations
+
   /**
    * Handles user sign-in requests.
-   * Authenticates the user and returns a JWT token upon successful authentication.
+   * Authenticates the user and returns a JWT access token and a refresh token upon successful authentication.
    *
    * @param loginRequest The request body containing username and password.
    * @return ResponseEntity with JwtResponse if successful, or error message.
@@ -66,19 +76,23 @@ public class AuthController {
     // Set the authenticated user in the SecurityContextHolder
     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-    // Generate a JWT token for the authenticated user
-    String jwt = jwtUtils.generateJwtToken(authentication);
-
     // Get UserDetails from the authentication object
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+    // Generate a JWT access token for the authenticated user
+    String jwt = jwtUtils.generateJwtToken(authentication);
+
+    // Create and save a refresh token for the user
+    RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
 
     // Extract roles from userDetails and convert them to a list of strings
     List<String> roles = userDetails.getAuthorities().stream()
         .map(item -> item.getAuthority())
         .collect(Collectors.toList());
 
-    // Return the JWT response containing token and user details
+    // Return the JWT response containing access token, refresh token, and user details
     return ResponseEntity.ok(new JwtResponse(jwt,
+        refreshToken.getToken(), // Include refresh token
         userDetails.getId(),
         userDetails.getUsername(),
         userDetails.getEmail(),
@@ -146,5 +160,32 @@ public class AuthController {
     userRepository.save(user); // Save the new user to the database
 
     return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+  }
+
+  /**
+   * Handles refresh token requests.
+   * Exchanges a valid refresh token for a new JWT access token.
+   *
+   * @param request The request body containing the refresh token.
+   * @return ResponseEntity with TokenRefreshResponse containing the new access token and the refresh token.
+   */
+  @PostMapping("/refreshtoken")
+  public ResponseEntity<?> refreshtoken(@Valid @RequestBody TokenRefreshRequest request) {
+    String requestRefreshToken = request.getRefreshToken();
+
+    return refreshTokenService.findByToken(requestRefreshToken)
+        .map(refreshTokenService::verifyExpiration) // Verify if token is expired
+        .map(RefreshToken::getUser) // Get the user associated with the refresh token
+        .map(user -> {
+          // Generate a new access token for the user
+          String newAccessToken = jwtUtils.generateJwtToken(
+              new UsernamePasswordAuthenticationToken(UserDetailsImpl.build(user), null, user.getRoles().stream()
+                  .map(role -> new SimpleGrantedAuthority(role.getName()))
+                  .collect(Collectors.toList()))
+          );
+          return ResponseEntity.ok(new TokenRefreshResponse(newAccessToken, requestRefreshToken, "Bearer"));
+        })
+        .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
+            "Refresh token is not in database!"));
   }
 }

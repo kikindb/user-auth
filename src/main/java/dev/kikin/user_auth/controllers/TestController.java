@@ -26,7 +26,7 @@ public class TestController {
    * Accessible only by authenticated users (any role).
    */
   @GetMapping("/user")
-  @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN')")
+  @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_MODERATOR') or hasRole('ROLE_ADMIN')")
   public String userAccess() {
     return "User Content.";
   }
@@ -35,7 +35,7 @@ public class TestController {
    * Accessible only by users with the "MODERATOR" role.
    */
   @GetMapping("/mod")
-  @PreAuthorize("hasRole('MODERATOR')")
+  @PreAuthorize("hasRole('ROLE_MODERATOR') or hasRole('ROLE_ADMIN')")
   public String moderatorAccess() {
     return "Moderator Board.";
   }

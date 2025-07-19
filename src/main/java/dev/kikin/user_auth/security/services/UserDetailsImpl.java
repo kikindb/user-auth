@@ -1,17 +1,23 @@
 package dev.kikin.user_auth.security.services;
 
 import dev.kikin.user_auth.entity.User;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.ArrayList; // Added import
 
+/**
+ * Custom implementation of Spring Security's UserDetails interface.
+ * This class wraps our User entity and provides the necessary details
+ * (username, password, authorities) for Spring Security to perform authentication and authorization.
+ */
 public class UserDetailsImpl implements UserDetails {
   private static final long serialVersionUID = 1L;
 
@@ -51,12 +57,14 @@ public class UserDetailsImpl implements UserDetails {
    * @return A new UserDetailsImpl instance.
    */
   public static UserDetailsImpl build(User user) {
-    // Map roles to SimpleGrantedAuthority objects (e.g., "ROLE_ADMIN", "ROLE_USER")
-    List<GrantedAuthority> authorities = user.getRoles().stream()
-        .map(role -> new SimpleGrantedAuthority(role.getName()))
-        .collect(Collectors.toList());
+    List<GrantedAuthority> authorities = new ArrayList<>();
 
-    // Additionally, map permissions to SimpleGrantedAuthority objects
+    // Add roles with "ROLE_" prefix
+    user.getRoles().forEach(role ->
+        authorities.add(new SimpleGrantedAuthority(role.getName())) // Assuming role.getName() already has "ROLE_" prefix
+    );
+
+    // Add permissions
     user.getRoles().forEach(role ->
         role.getPermissions().stream()
             .map(permission -> new SimpleGrantedAuthority(permission.getName()))

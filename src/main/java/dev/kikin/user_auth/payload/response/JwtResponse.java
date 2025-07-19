@@ -1,4 +1,4 @@
-package dev.kikin.user_auth.payload.request;
+package dev.kikin.user_auth.payload.response;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,8 +9,8 @@ import java.util.List;
  * DTO for JWT authentication response.
  * Contains the JWT token, user ID, username, email, roles, and refresh token.
  */
-@Data
-@NoArgsConstructor
+@Data // Lombok annotation to generate getters, setters, toString, equals, and hashCode
+@NoArgsConstructor // Lombok annotation to generate a no-argument constructor
 public class JwtResponse {
   private String accessToken; // Renamed for clarity (was 'token')
   private String refreshToken; // New field for refresh token

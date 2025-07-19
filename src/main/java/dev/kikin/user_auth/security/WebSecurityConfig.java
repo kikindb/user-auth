@@ -3,6 +3,7 @@ package dev.kikin.user_auth.security;
 import dev.kikin.user_auth.security.jwt.AuthEntryPointJwt;
 import dev.kikin.user_auth.security.jwt.AuthTokenFilter;
 import dev.kikin.user_auth.security.services.UserDetailsServiceImpl;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,15 +17,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.core.authority.SimpleGrantedAuthority; // Added import
 
 /**
  * Main Spring Security configuration class for the authentication microservice.
  * This class defines security rules, password encoder, authentication manager,
  * and integrates JWT authentication.
  */
-@Configuration
-@EnableMethodSecurity
+@Configuration // Marks this class as a Spring configuration class
+@EnableMethodSecurity // Enables method-level security annotations like @PreAuthorize
 public class WebSecurityConfig {
+
   @Autowired
   UserDetailsServiceImpl userDetailsService; // Service to load user details
 
@@ -97,7 +100,7 @@ public class WebSecurityConfig {
         .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler)) // Set unauthorized handler
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Use stateless sessions (JWT)
         .authorizeHttpRequests(auth ->
-            auth.requestMatchers("/api/auth/**").permitAll() // Permit all requests to /api/auth (for login/registration)
+            auth.requestMatchers("/api/auth/**").permitAll() // Permit all requests to /api/auth (for login/registration/refresh)
                 .requestMatchers("/api/test/**").permitAll() // Permit all requests to /api/test (for testing roles/permissions)
                 .anyRequest().authenticated() // All other requests require authentication
         );
