@@ -17,7 +17,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.core.authority.SimpleGrantedAuthority; // Added import
 
 /**
  * Main Spring Security configuration class for the authentication microservice.
@@ -102,6 +101,7 @@ public class WebSecurityConfig {
         .authorizeHttpRequests(auth ->
             auth.requestMatchers("/api/auth/**").permitAll() // Permit all requests to /api/auth (for login/registration/refresh)
                 .requestMatchers("/api/test/**").permitAll() // Permit all requests to /api/test (for testing roles/permissions)
+                .requestMatchers("/health").permitAll()
                 .anyRequest().authenticated() // All other requests require authentication
         );
 
